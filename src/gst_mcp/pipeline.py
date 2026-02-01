@@ -1,7 +1,9 @@
 """GStreamer pipeline validation and execution."""
 
+import os
 import threading
 import uuid
+from contextlib import contextmanager
 from typing import Any
 
 import gi
@@ -17,6 +19,21 @@ if not Gst.is_initialized():
 # Global registry of running pipelines
 _running_pipelines: dict[str, dict[str, Any]] = {}
 _pipelines_lock = threading.Lock()
+
+
+@contextmanager
+def _working_directory(path: str | None):
+    """Context manager to temporarily change working directory."""
+    if path is None:
+        yield
+        return
+
+    original = os.getcwd()
+    try:
+        os.chdir(path)
+        yield
+    finally:
+        os.chdir(original)
 
 
 def validate_pipeline(pipeline_string: str) -> dict[str, Any]:
@@ -175,6 +192,7 @@ def run_pipeline(
     pipeline_string: str,
     timeout_seconds: float | None = None,
     async_mode: bool = False,
+    working_directory: str | None = None,
 ) -> dict[str, Any]:
     """Run a GStreamer pipeline.
 
@@ -182,41 +200,54 @@ def run_pipeline(
         pipeline_string: A gst-launch style pipeline string
         timeout_seconds: Optional timeout (for one-shot pipelines)
         async_mode: If True, start pipeline and return immediately with a handle
+        working_directory: Directory to run the pipeline in (for relative file paths)
 
     Returns:
         Execution result or pipeline handle
     """
-    # Validate first
-    validation = validate_pipeline(pipeline_string)
-    if not validation["valid"]:
+    # Validate working directory
+    if working_directory and not os.path.isdir(working_directory):
         return {
             "success": False,
-            "error": "Pipeline validation failed",
-            "validation": validation,
+            "error": f"Working directory does not exist: {working_directory}",
         }
 
-    try:
-        pipeline = Gst.parse_launch(pipeline_string)
-    except GLib.Error as e:
-        return {
-            "success": False,
-            "error": str(e.message) if hasattr(e, "message") else str(e),
-        }
+    with _working_directory(working_directory):
+        # Validate first
+        validation = validate_pipeline(pipeline_string)
+        if not validation["valid"]:
+            return {
+                "success": False,
+                "error": "Pipeline validation failed",
+                "validation": validation,
+            }
 
-    pipeline_id = str(uuid.uuid4())[:8]
+        try:
+            pipeline = Gst.parse_launch(pipeline_string)
+        except GLib.Error as e:
+            return {
+                "success": False,
+                "error": str(e.message) if hasattr(e, "message") else str(e),
+            }
 
-    if async_mode:
-        # Start pipeline in background
-        return _start_async_pipeline(pipeline, pipeline_id, pipeline_string)
-    else:
-        # Run pipeline synchronously
-        return _run_sync_pipeline(pipeline, pipeline_id, timeout_seconds)
+        pipeline_id = str(uuid.uuid4())[:8]
+
+        if async_mode:
+            # Start pipeline in background
+            # Note: For async pipelines, the working_directory is stored so files
+            # are written relative to it. The directory change persists for the
+            # pipeline's lifetime through the stored path.
+            return _start_async_pipeline(pipeline, pipeline_id, pipeline_string, working_directory)
+        else:
+            # Run pipeline synchronously
+            return _run_sync_pipeline(pipeline, pipeline_id, timeout_seconds)
 
 
 def _start_async_pipeline(
     pipeline: Gst.Pipeline,
     pipeline_id: str,
     pipeline_string: str,
+    working_directory: str | None = None,
 ) -> dict[str, Any]:
     """Start a pipeline in async mode."""
     bus = pipeline.get_bus()
@@ -225,6 +256,7 @@ def _start_async_pipeline(
     pipeline_info = {
         "pipeline": pipeline,
         "pipeline_string": pipeline_string,
+        "working_directory": working_directory,
         "state": "starting",
         "messages": [],
         "error": None,

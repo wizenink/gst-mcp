@@ -157,7 +157,7 @@ TOOLS = [
     # Pipeline Tools
     Tool(
         name="validate_pipeline",
-        description="Validate a GStreamer pipeline string without running it. Reports errors and suggestions.",
+        description="Validate a GStreamer pipeline string without running it. Reports errors and suggestions. IMPORTANT: Always use this tool FIRST when the user asks for a pipeline. Present the validated pipeline to the user and wait for their explicit confirmation before running it.",
         inputSchema={
             "type": "object",
             "properties": {
@@ -171,7 +171,7 @@ TOOLS = [
     ),
     Tool(
         name="run_pipeline",
-        description="Run a GStreamer pipeline. Can run synchronously with timeout or asynchronously.",
+        description="Run a GStreamer pipeline. Can run synchronously with timeout or asynchronously. CRITICAL: Do NOT call this tool unless the user has EXPLICITLY confirmed they want to run the pipeline. Always use validate_pipeline first to check and present the pipeline, then wait for the user to say they want to run it before calling this tool. IMPORTANT: Always provide working_directory so output files are created in the user's workspace, not the MCP server directory.",
         inputSchema={
             "type": "object",
             "properties": {
@@ -188,6 +188,10 @@ TOOLS = [
                     "type": "boolean",
                     "description": "If true, start in background and return a handle",
                     "default": False,
+                },
+                "working_directory": {
+                    "type": "string",
+                    "description": "Directory to run the pipeline in. Output files will be created here. Should be set to the user's current working directory.",
                 },
             },
             "required": ["pipeline_string"],
@@ -468,6 +472,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             arguments["pipeline_string"],
             timeout_seconds=arguments.get("timeout_seconds", 5.0),
             async_mode=arguments.get("async_mode", False),
+            working_directory=arguments.get("working_directory"),
         )
         text = f"# Pipeline Execution\n\n"
         text += f"**Success:** {'Yes' if result.get('success') else 'No'}\n"
