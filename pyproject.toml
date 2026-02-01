@@ -1,40 +1,34 @@
 [project]
 name = "gst-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "MCP server for GStreamer introspection and pipeline development"
 readme = "README.md"
 license = "MIT"
-authors = [
-    { name = "David Maseda Neira" }
-]
+authors = [{ name = "David Maseda Neira" }]
 requires-python = ">=3.13"
 keywords = [
-    "mcp",
-    "gstreamer",
-    "multimedia",
-    "video",
-    "audio",
-    "pipeline",
-    "llm",
-    "claude",
-    "ai",
+  "mcp",
+  "gstreamer",
+  "multimedia",
+  "video",
+  "audio",
+  "pipeline",
+  "llm",
+  "claude",
+  "ai",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
-    "Topic :: Multimedia :: Sound/Audio",
-    "Topic :: Multimedia :: Video",
-    "Topic :: Software Development :: Libraries :: Python Modules",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Sound/Audio",
+  "Topic :: Multimedia :: Video",
+  "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = [
-    "mcp>=1.0.0",
-    "PyGObject>=3.42.0",
-    "httpx>=0.27.0",
-]
+dependencies = ["mcp>=1.0.0", "PyGObject>=3.42.0", "httpx>=0.27.0"]
 
 [project.urls]
 Homepage = "https://github.com/wizenink/gst-mcp"
