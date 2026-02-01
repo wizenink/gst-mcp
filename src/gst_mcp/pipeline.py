@@ -276,13 +276,21 @@ def _start_async_pipeline(
                 info["state"] = "error"
                 info["error"] = err.message
                 info["messages"].append(f"ERROR: {err.message}")
+                # Stop pipeline on error
+                pipeline.set_state(Gst.State.NULL)
+                info["messages"].append("Pipeline stopped due to error")
             elif msg_type == Gst.MessageType.EOS:
-                info["state"] = "eos"
-                info["messages"].append("End of stream")
+                info["state"] = "completed"
+                info["messages"].append("End of stream - pipeline completed")
+                # Stop pipeline on EOS - the work is done
+                pipeline.set_state(Gst.State.NULL)
+                info["messages"].append("Pipeline stopped")
             elif msg_type == Gst.MessageType.STATE_CHANGED:
                 if message.src == pipeline:
                     old, new, pending = message.parse_state_changed()
-                    info["state"] = new.value_nick
+                    # Only update state if not already completed/error
+                    if info["state"] not in ("completed", "error"):
+                        info["state"] = new.value_nick
                     info["messages"].append(f"State: {old.value_nick} -> {new.value_nick}")
             elif msg_type == Gst.MessageType.WARNING:
                 warn, debug = message.parse_warning()
