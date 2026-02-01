@@ -20,7 +20,13 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgirepository1.0-dev gir1.2-gstreamer-1.0 gstreamer1.0-tools
+          sudo apt-get install -y \
+            libgirepository-2.0-dev \
+            libcairo2-dev \
+            pkg-config \
+            python3-dev \
+            gir1.2-gstreamer-1.0 \
+            gstreamer1.0-tools
 
       - name: Build package
         run: uv build
