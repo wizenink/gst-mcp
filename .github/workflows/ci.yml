@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgirepository1.0-dev \
+            gir1.2-gstreamer-1.0 \
+            gstreamer1.0-tools \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Test imports
+        run: |
+          uv run python -c "from gst_mcp import registry, caps, pipeline, examples"
+
+      - name: Test basic functionality
+        run: |
+          uv run python -c "
+          from gst_mcp import registry, caps, pipeline
+
+          # Test registry
+          elements = registry.list_elements(limit=5)
+          assert len(elements) > 0, 'No elements found'
+
+          # Test element info
+          info = registry.get_element_info('fakesrc')
+          assert info is not None, 'fakesrc not found'
+
+          # Test caps parsing
+          caps_info = caps.parse_caps('video/x-raw,format=I420')
+          assert caps_info['valid'], 'Caps parsing failed'
+
+          # Test pipeline validation
+          result = pipeline.validate_pipeline('fakesrc ! fakesink')
+          assert result['valid'], 'Pipeline validation failed'
+
+          print('All tests passed!')
+          "
+
+      - name: Build package
+        run: uv build
